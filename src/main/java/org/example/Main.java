@@ -18,6 +18,12 @@ public class Main {
         System.out.println("Identifiant : " + identifiant);
         System.out.println("Mot de passe : " + motDePasse);
 
+        // Création d'une instance de Cartes
+        Cartes carte1 = new Cartes("Monstre", "Rare", "Dragon Rouge");
+
+        // Affichage des informations de la carte
+        System.out.println(carte1);
+
         scanner.close();
     }
 }
