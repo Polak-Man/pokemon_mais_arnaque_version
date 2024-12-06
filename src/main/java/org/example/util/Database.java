@@ -1,13 +1,13 @@
-package org.example.util;
+package com.example.util;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
 public class Database {
-    private static final String URL = "jdbc:mysql://localhost:3306/pkmarn"; // Modifiez selon vos besoin
+    private static final String URL = "jdbc:mysql://localhost:3306/spark_api_db"; // Modifiez selon vos besoin
     private static final String USER = "root"; // Modifiez par votre utilisateur
-    private static final String PASSWORD = ""; // Modifiez par votre mot de passe
+    private static final String PASSWORD = "password"; // Modifiez par votre mot de passe
 
     static {
         try {
