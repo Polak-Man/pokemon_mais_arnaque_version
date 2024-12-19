@@ -124,23 +124,28 @@ public class Database {
     }
 
     public static boolean deleteUser(String username) {
-        String query = "DELETE FROM usr WHERE usr_id = ?";
+        String checkQuery = "SELECT 1 FROM usr WHERE usr_id = ?";
+        String deleteQuery = "DELETE FROM usr WHERE usr_id = ?";
         try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
-             PreparedStatement stmt = conn.prepareStatement(query)) {
+             PreparedStatement checkStmt = conn.prepareStatement(checkQuery);
+             PreparedStatement deleteStmt = conn.prepareStatement(deleteQuery)) {
 
-            stmt.setString(1, username);
-            int rowsDeleted = stmt.executeUpdate();
-            if (rowsDeleted > 0) {
-                return true;
-            } else {
+            checkStmt.setString(1, username);
+            ResultSet rs = checkStmt.executeQuery();
+            if (!rs.next()) {
                 System.err.println("User not found: " + username);
-                return false; // L'utilisateur n'a pas été trouvé
+                return false; // L'utilisateur n'existe pas
             }
+
+            deleteStmt.setString(1, username);
+            int rowsDeleted = deleteStmt.executeUpdate();
+            return rowsDeleted > 0;
         } catch (SQLException e) {
             System.err.println("Error during user deletion: " + e.getMessage());
             return false; // Problème de base de données
         }
     }
+
 
 
 }
