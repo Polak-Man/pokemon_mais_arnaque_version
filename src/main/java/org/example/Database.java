@@ -96,9 +96,29 @@ public class Database {
             stmt.setBoolean(1, isAdmin);
             stmt.setString(2, username);
             int rowsUpdated = stmt.executeUpdate();
+            if (rowsUpdated > 0) {
+                return true;
+            } else {
+                System.err.println("User not found: " + username);
+                return false; // L'utilisateur n'a pas été trouvé
+            }
+        } catch (SQLException e) {
+            System.err.println("Error during user update: " + e.getMessage());
+            return false; // Problème de base de données
+        }
+    }
+
+    public static boolean updatePassword(String username, String newPassword) {
+        String query = "UPDATE usr SET password = ? WHERE usr_id = ?";
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            stmt.setString(1, newPassword);
+            stmt.setString(2, username);
+            int rowsUpdated = stmt.executeUpdate();
             return rowsUpdated > 0;
         } catch (SQLException e) {
-            System.err.println("Erreur lors de la mise à jour de l'utilisateur : " + e.getMessage());
+            System.err.println("Erreur lors de la mise à jour du mot de passe : " + e.getMessage());
             return false;
         }
     }
@@ -110,10 +130,17 @@ public class Database {
 
             stmt.setString(1, username);
             int rowsDeleted = stmt.executeUpdate();
-            return rowsDeleted > 0;
+            if (rowsDeleted > 0) {
+                return true;
+            } else {
+                System.err.println("User not found: " + username);
+                return false; // L'utilisateur n'a pas été trouvé
+            }
         } catch (SQLException e) {
-            System.err.println("Erreur lors de la suppression de l'utilisateur : " + e.getMessage());
-            return false;
+            System.err.println("Error during user deletion: " + e.getMessage());
+            return false; // Problème de base de données
         }
     }
+
+
 }

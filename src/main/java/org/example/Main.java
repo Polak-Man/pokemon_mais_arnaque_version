@@ -58,26 +58,65 @@ public class Main {
         put("/users/:username", (req, res) -> {
             res.type("application/json");
             String username = req.params("username");
-            boolean isAdmin = new Gson().fromJson(req.body(), User.class).isAdmin();
-            boolean success = Database.updateUser(username, isAdmin);
-            if (success) {
-                return new Gson().toJson(new ApiResponse("success", "User updated successfully!"));
-            } else {
-                res.status(400);
-                return new Gson().toJson(new ApiResponse("error", "User update failed!"));
+            try {
+                boolean isAdmin = new Gson().fromJson(req.body(), User.class).isAdmin();
+                boolean success = Database.updateUser(username, isAdmin);
+
+                if (success) {
+                    return new Gson().toJson(new ApiResponse("success", "User updated successfully!"));
+                } else {
+                    res.status(400);
+                    return new Gson().toJson(new ApiResponse("error", "Failed to update user. User not found or database issue."));
+                }
+            } catch (Exception e) {
+                res.status(500);
+                return new Gson().toJson(new ApiResponse("error", "An unexpected error occurred: " + e.getMessage()));
             }
         });
+
+        // Route pour mettre à jour un mot de passe
+        put("/users/:username/password", (req, res) -> {
+            res.type("application/json");
+            String username = req.params("username");
+            String currentUsername = req.headers("Username");
+
+            // Vérifie si l'utilisateur est admin ou met à jour son propre mot de passe
+            boolean isAdmin = Database.isAdmin(currentUsername);
+            if (!isAdmin && !currentUsername.equals(username)) {
+                res.status(403);
+                return new Gson().toJson(new ApiResponse("error", "Forbidden: Only the user or an admin can update the password"));
+            }
+
+            User requestUser = new Gson().fromJson(req.body(), User.class);
+
+            // Met à jour le mot de passe dans la base de données
+            boolean success = Database.updatePassword(username, requestUser.getNewPassword());
+            if (success) {
+                return new Gson().toJson(new ApiResponse("success", "Password updated successfully!"));
+            } else {
+                res.status(400);
+                return new Gson().toJson(new ApiResponse("error", "Password update failed!"));
+            }
+        });
+
 
         delete("/users/:username", (req, res) -> {
             res.type("application/json");
             String username = req.params("username");
-            boolean success = Database.deleteUser(username);
-            if (success) {
-                return new Gson().toJson(new ApiResponse("success", "User deleted successfully!"));
-            } else {
-                res.status(400);
-                return new Gson().toJson(new ApiResponse("error", "User deletion failed!"));
+            try {
+                boolean success = Database.deleteUser(username);
+
+                if (success) {
+                    return new Gson().toJson(new ApiResponse("success", "User deleted successfully!"));
+                } else {
+                    res.status(400);
+                    return new Gson().toJson(new ApiResponse("error", "Failed to delete user. User not found or database issue."));
+                }
+            } catch (Exception e) {
+                res.status(500);
+                return new Gson().toJson(new ApiResponse("error", "An unexpected error occurred: " + e.getMessage()));
             }
         });
+
     }
 }

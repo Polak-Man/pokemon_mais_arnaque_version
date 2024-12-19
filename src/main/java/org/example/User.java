@@ -4,6 +4,7 @@ public class User {
     private String username;
     private String password;
     private boolean isAdmin;
+    private String newPassword;
 
     public String getUsername() {
         return username;
@@ -13,6 +14,9 @@ public class User {
         return password;
     }
 
+    public String getNewPassword() {
+        return newPassword;
+    }
     public boolean isAdmin() {
         return isAdmin;
     }
@@ -27,5 +31,10 @@ public class User {
 
     public void setAdmin(boolean isAdmin) {
         this.isAdmin = isAdmin;
+    }
+
+
+    public void setNewPassword(String newPassword) {
+        this.newPassword = newPassword;
     }
 }
