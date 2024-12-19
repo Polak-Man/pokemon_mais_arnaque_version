@@ -7,9 +7,6 @@ public class Main {
     public static void main(String[] args) {
         port(4567); // Démarre le serveur sur le port 4567
 
-        // Initialisation de la base de données
-        Database.init();
-
         // Route pour l'inscription
         post("/register", (req, res) -> {
             res.type("application/json");
@@ -34,6 +31,14 @@ public class Main {
                 res.status(401);
                 return new Gson().toJson(new ApiResponse("error", "Invalid username or password!"));
             }
+        });
+
+        // Route pour vérifier si un utilisateur est administrateur
+        get("/is-admin/:username", (req, res) -> {
+            res.type("application/json");
+            String username = req.params("username");
+            boolean isAdmin = Database.isAdmin(username);
+            return new Gson().toJson(new ApiResponse("success", "Is admin: " + isAdmin));
         });
     }
 }
