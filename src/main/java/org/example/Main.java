@@ -1,62 +1,39 @@
 package org.example;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.Scanner;
-import org.example.models.AuthResult; // Assurez-vous que cette classe est dans le bon package
-import org.example.models.Cartes;
-import org.example.util.Database;
+import static spark.Spark.*;
+import com.google.gson.Gson;
 
 public class Main {
     public static void main(String[] args) {
-        System.out.println("Bienvenue sur la page de connexion");
+        port(4567); // Démarre le serveur sur le port 4567
 
-        Scanner scanner = new Scanner(System.in);
+        // Initialisation de la base de données
+        Database.init();
 
-        // Demande de l'identifiant
-        System.out.print("Saisir identifiant : ");
-        String identifiant = scanner.nextLine();
-
-        // Demande du mot de passe
-        System.out.print("Saisir mot de passe : ");
-        String motDePasse = scanner.nextLine();
-
-        // Vérification des informations d'identification
-        AuthResult authResult = authenticateUser (identifiant, motDePasse);
-        if (authResult.isAuthenticated()) {
-            if (authResult.isAdmin()) {
-                System.out.println("Connecté en tant qu'Admin !");
+        // Route pour l'inscription
+        post("/register", (req, res) -> {
+            res.type("application/json");
+            User user = new Gson().fromJson(req.body(), User.class);
+            boolean success = Database.registerUser(user);
+            if (success) {
+                return new Gson().toJson(new ApiResponse("success", "User registered successfully!"));
             } else {
-                System.out.println("Connecté en utilisateur lambda cheh !");
+                res.status(400);
+                return new Gson().toJson(new ApiResponse("error", "User already exists or invalid data!"));
             }
-            // Création d'une instance de Cartes (si nécessaire)
-            // Cartes carte1 = new Cartes("Monstre", "Rare", "Dragon Rouge");
-            // Affichage des informations de la carte
-            // System.out.println(carte1);
-        } else {
-            System.out.println("Erreur : Identifiant ou mot de passe incorrect.");
-        }
+        });
 
-        scanner.close();
-    }
-
-    private static AuthResult authenticateUser (String identifiant, String motDePasse) {
-        String query = "SELECT is_admin FROM usr WHERE usr_id = ? AND password = ?";
-        try (Connection connection = Database.getConnection();
-             PreparedStatement statement = connection.prepareStatement(query)) {
-            statement.setString(1, identifiant);
-            statement.setString(2, motDePasse);
-            ResultSet resultSet = statement.executeQuery();
-
-            if (resultSet.next()) { // Si un utilisateur est trouvé
-                boolean isAdmin = resultSet.getBoolean("is_admin");
-                return new AuthResult(true, isAdmin); // Authentification réussie
+        // Route pour la connexion
+        post("/login", (req, res) -> {
+            res.type("application/json");
+            User user = new Gson().fromJson(req.body(), User.class);
+            boolean isValid = Database.validateUser(user);
+            if (isValid) {
+                return new Gson().toJson(new ApiResponse("success", "Login successful!"));
+            } else {
+                res.status(401);
+                return new Gson().toJson(new ApiResponse("error", "Invalid username or password!"));
             }
-        } catch (SQLException e) {
-            System.out.println("Erreur lors de la connexion à la base de données : " + e.getMessage());
-        }
-        return new AuthResult(false, false); // Authentification échouée
+        });
     }
 }
