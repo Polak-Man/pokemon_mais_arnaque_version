@@ -1,6 +1,8 @@
 package org.example;
 
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Database {
     private static final String DB_URL = "jdbc:mysql://localhost:3306/pkmarn";
@@ -63,6 +65,54 @@ public class Database {
             return false;
         } catch (SQLException e) {
             System.err.println("Erreur lors de la vérification de l'administrateur : " + e.getMessage());
+            return false;
+        }
+    }
+
+    public static List<User> getAllUsers() {
+        String query = "SELECT usr_id, is_admin FROM usr";
+        List<User> users = new ArrayList<>();
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement stmt = conn.prepareStatement(query);
+             ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                User user = new User();
+                user.setUsername(rs.getString("usr_id"));
+                user.setAdmin(rs.getBoolean("is_admin"));
+                users.add(user);
+            }
+        } catch (SQLException e) {
+            System.err.println("Erreur lors de la récupération des utilisateurs : " + e.getMessage());
+        }
+        return users;
+    }
+
+    public static boolean updateUser(String username, boolean isAdmin) {
+        String query = "UPDATE usr SET is_admin = ? WHERE usr_id = ?";
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            stmt.setBoolean(1, isAdmin);
+            stmt.setString(2, username);
+            int rowsUpdated = stmt.executeUpdate();
+            return rowsUpdated > 0;
+        } catch (SQLException e) {
+            System.err.println("Erreur lors de la mise à jour de l'utilisateur : " + e.getMessage());
+            return false;
+        }
+    }
+
+    public static boolean deleteUser(String username) {
+        String query = "DELETE FROM usr WHERE usr_id = ?";
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            stmt.setString(1, username);
+            int rowsDeleted = stmt.executeUpdate();
+            return rowsDeleted > 0;
+        } catch (SQLException e) {
+            System.err.println("Erreur lors de la suppression de l'utilisateur : " + e.getMessage());
             return false;
         }
     }
