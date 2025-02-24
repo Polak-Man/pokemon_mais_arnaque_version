@@ -118,5 +118,65 @@ public class Main {
             }
         });
 
+        // Route pour ajouter une carte Pokémon
+        post("/pokemon", (req, res) -> {
+            res.type("application/json");
+            PokemonCard card = new Gson().fromJson(req.body(), PokemonCard.class);
+            boolean success = Database.addPokemonCard(card);
+            if (success) {
+                return new Gson().toJson(new ApiResponse("success", "Pokemon card added successfully!"));
+            } else {
+                res.status(400);
+                return new Gson().toJson(new ApiResponse("error", "Failed to add Pokemon card!"));
+            }
+        });
+
+        // Route pour mettre à jour une carte Pokémon
+        put("/pokemon/:cardId", (req, res) -> {
+            res.type("application/json");
+            int cardId = Integer.parseInt(req.params("cardId"));
+            PokemonCard card = new Gson().fromJson(req.body(), PokemonCard.class);
+            boolean success = Database.updatePokemonCard(cardId, card);
+            if (success) {
+                return new Gson().toJson(new ApiResponse("success", "Pokemon card updated successfully!"));
+            } else {
+                res.status(400);
+                return new Gson().toJson(new ApiResponse("error", "Failed to update Pokemon card!"));
+            }
+        });
+
+        // Route pour supprimer une carte Pokémon
+        delete("/pokemon/:cardId", (req, res) -> {
+            res.type("application/json");
+            int cardId = Integer.parseInt(req.params("cardId"));
+            boolean success = Database.deletePokemonCard(cardId);
+            if (success) {
+                return new Gson().toJson(new ApiResponse("success", "Pokemon card deleted successfully!"));
+            } else {
+                res.status(400);
+                return new Gson().toJson(new ApiResponse("error", "Failed to delete Pokemon card!"));
+            }
+        });
+
+        // Route pour obtenir toutes les cartes Pokémon
+        get("/pokemon", (req, res) -> {
+            res.type("application/json");
+            return new Gson().toJson(Database.getAllPokemonCards());
+        });
+
+
+        // Route pour obtenir une carte Pokémon par son ID
+        get("/pokemon/:cardId", (req, res) -> {
+            res.type("application/json");
+            int cardId = Integer.parseInt(req.params("cardId"));
+            PokemonCard card = Database.getPokemonCardById(cardId);
+            if (card != null) {
+                return new Gson().toJson(card);
+            } else {
+                res.status(404);
+                return new Gson().toJson(new ApiResponse("error", "Pokemon card not found!"));
+            }
+        });
+
     }
 }

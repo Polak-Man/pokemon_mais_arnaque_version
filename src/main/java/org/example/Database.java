@@ -146,6 +146,109 @@ public class Database {
         }
     }
 
+    public static List<PokemonCard> getAllPokemonCards() {
+        List<PokemonCard> cards = new ArrayList<>();
+        String query = "SELECT * FROM pokemon_cards";
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(query)) {
+
+            while (rs.next()) {
+                PokemonCard card = new PokemonCard();
+                card.setCardId(rs.getInt("card_id"));
+                card.setCardName(rs.getString("card_name"));
+                card.setEdition(rs.getString("edition"));
+                card.setSetName(rs.getString("set_name"));
+                card.setCardType(rs.getString("card_type"));
+                card.setHp(rs.getInt("hp"));
+                card.setAttack(rs.getInt("attack"));
+                card.setRarity(rs.getString("rarity"));
+                card.setDescription(rs.getString("description"));
+                cards.add(card);
+            }
+        } catch (SQLException e) {
+            System.err.println("Erreur lors de la récupération des cartes : " + e.getMessage());
+        }
+        return cards;
+    }
+
+    public static PokemonCard getPokemonCardById(int cardId) {
+        String query = "SELECT * FROM pokemon_cards WHERE card_id = ?";
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setInt(1, cardId);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                PokemonCard card = new PokemonCard();
+                card.setCardId(rs.getInt("card_id"));
+                card.setCardName(rs.getString("card_name"));
+                card.setEdition(rs.getString("edition"));
+                card.setSetName(rs.getString("set_name"));
+                card.setCardType(rs.getString("card_type"));
+                card.setHp(rs.getInt("hp"));
+                card.setAttack(rs.getInt("attack"));
+                card.setRarity(rs.getString("rarity"));
+                card.setDescription(rs.getString("description"));
+                return card;
+            }
+        } catch (SQLException e) {
+            System.err.println("Erreur lors de la récupération de la carte : " + e.getMessage());
+        }
+        return null;
+    }
+
+    public static boolean addPokemonCard(PokemonCard card) {
+        String query = "INSERT INTO pokemon_cards (card_name, edition, set_name, card_type, hp, attack, rarity, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            stmt.setString(1, card.getCardName());
+            stmt.setString(2, card.getEdition());
+            stmt.setString(3, card.getSetName());
+            stmt.setString(4, card.getCardType());
+            stmt.setInt(5, card.getHp());
+            stmt.setInt(6, card.getAttack());
+            stmt.setString(7, card.getRarity());
+            stmt.setString(8, card.getDescription());
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Erreur lors de l'ajout de la carte : " + e.getMessage());
+            return false;
+        }
+    }
+
+    public static boolean updatePokemonCard(int cardId, PokemonCard card) {
+        String query = "UPDATE pokemon_cards SET card_name=?, edition=?, set_name=?, card_type=?, hp=?, attack=?, rarity=?, description=? WHERE card_id=?";
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            stmt.setString(1, card.getCardName());
+            stmt.setString(2, card.getEdition());
+            stmt.setString(3, card.getSetName());
+            stmt.setString(4, card.getCardType());
+            stmt.setInt(5, card.getHp());
+            stmt.setInt(6, card.getAttack());
+            stmt.setString(7, card.getRarity());
+            stmt.setString(8, card.getDescription());
+            stmt.setInt(9, cardId);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Erreur lors de la mise à jour de la carte : " + e.getMessage());
+            return false;
+        }
+    }
+
+    public static boolean deletePokemonCard(int cardId) {
+        String query = "DELETE FROM pokemon_cards WHERE card_id=?";
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setInt(1, cardId);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Erreur lors de la suppression de la carte : " + e.getMessage());
+            return false;
+        }
+    }
 
 
 }
