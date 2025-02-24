@@ -1,4 +1,18 @@
 ```
+CREATE TABLE usr (
+    usr_id VARCHAR(25) PRIMARY KEY NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    is_admin TINYINT DEFAULT 0
+);
+
+CREATE TABLE user_pokemon_cards (
+    user_id VARCHAR(25) NOT NULL,
+    card_id BIGINT NOT NULL,
+    PRIMARY KEY (user_id, card_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id),
+    FOREIGN KEY (card_id) REFERENCES pokemon_cards(card_id)
+);
+
 CREATE TABLE pokemon_cards (
     card_id INT AUTO_INCREMENT PRIMARY KEY,
     card_name VARCHAR(255) NOT NULL,
@@ -10,6 +24,7 @@ CREATE TABLE pokemon_cards (
     rarity VARCHAR(50),
     description TEXT
 );
+
 
 INSERT INTO pokemon_cards (card_id, card_name, edition, set_name, card_type, hp, attack, rarity, description) VALUES
 
