@@ -37,14 +37,21 @@ public class Main {
         post("/login", (req, res) -> {
             res.type("application/json");
             User user = new Gson().fromJson(req.body(), User.class);
-            Database.UserValidationResult isValid = Database.validateUser(user);
-            if (isValid) {
+
+            // Appel à la méthode de validation modifiée qui renvoie un objet UserValidationResult
+            Database.UserValidationResult validationResult = Database.validateUser(user);
+
+            // Vérification de la validité du mot de passe
+            if (validationResult.isPasswordValid()) {
+                // Si le mot de passe est valide, vous pouvez aussi vérifier si l'utilisateur est admin si nécessaire
+                // Par exemple, vous pouvez envoyer un message différent si l'utilisateur est admin
                 return new Gson().toJson(new ApiResponse("success", "Login successful!"));
             } else {
                 res.status(401);
                 return new Gson().toJson(new ApiResponse("error", "Invalid username or password!"));
             }
         });
+
 
         // Route pour vérifier si un utilisateur est administrateur
         get("/is-admin/:username", (req, res) -> {
