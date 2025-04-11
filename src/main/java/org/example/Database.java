@@ -34,7 +34,25 @@ public class Database {
         }
     }
 
-    public static boolean validateUser(User user) {
+    public static class UserValidationResult {
+        private final boolean isPasswordValid;
+        private final boolean isAdmin;
+
+        public UserValidationResult(boolean isPasswordValid, boolean isAdmin) {
+            this.isPasswordValid = isPasswordValid;
+            this.isAdmin = isAdmin;
+        }
+
+        public boolean isPasswordValid() {
+            return isPasswordValid;
+        }
+
+        public boolean isAdmin() {
+            return isAdmin;
+        }
+    }
+
+    public static UserValidationResult validateUser(User user) {
         String query = "SELECT password, is_admin FROM usr WHERE usr_id = ?";
         try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
              PreparedStatement stmt = conn.prepareStatement(query)) {
@@ -44,14 +62,16 @@ public class Database {
             if (rs.next()) {
                 boolean isAdmin = rs.getBoolean("is_admin");
                 String storedPassword = rs.getString("password");
-                return {storedPassword.equals(user.getPassword()), isAdmin};
+                boolean isPasswordValid = storedPassword.equals(user.getPassword());
+                return new UserValidationResult(isPasswordValid, isAdmin);
             }
-            return false;
+            return new UserValidationResult(false, false); // User not found
         } catch (SQLException e) {
             System.err.println("Erreur lors de la validation : " + e.getMessage());
-            return false;
+            return new UserValidationResult(false, false); // Error case
         }
     }
+
 
     public static User getUserByUsername(String username) {
         String query = "SELECT usr_id, password, is_admin FROM usr WHERE usr_id = ?";

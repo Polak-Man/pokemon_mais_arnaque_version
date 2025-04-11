@@ -37,7 +37,7 @@ public class Main {
         post("/login", (req, res) -> {
             res.type("application/json");
             User user = new Gson().fromJson(req.body(), User.class);
-            boolean isValid = Database.validateUser(user);
+            Database.UserValidationResult isValid = Database.validateUser(user);
             if (isValid) {
                 return new Gson().toJson(new ApiResponse("success", "Login successful!"));
             } else {
