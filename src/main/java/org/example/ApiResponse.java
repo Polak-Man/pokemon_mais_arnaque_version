@@ -4,6 +4,7 @@ public class ApiResponse {
     private String status;
     private String message;
     private User user; // Ajout d'un attribut user pour renvoyer les informations de l'utilisateur
+    private String token;
 
     // Constructeur sans 'user'
     public ApiResponse(String status, String message) {
@@ -16,6 +17,14 @@ public class ApiResponse {
         this.status = status;
         this.message = message;
         this.user = user;
+    }
+
+    public String getToken() {
+        return token;
+    }
+
+    public void setToken(String token) {
+        this.token = token;
     }
 
     public ApiResponse(String success, String message, boolean admin) {

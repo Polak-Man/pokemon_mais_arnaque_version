@@ -33,8 +33,8 @@ public class Main {
             }
         });
 
-        // Route pour la connexion
-        // Route pour la connexion
+
+// Route pour la connexion
         post("/login", (req, res) -> {
             res.type("application/json");
             User user = new Gson().fromJson(req.body(), User.class);
@@ -43,22 +43,20 @@ public class Main {
             System.out.println("Tentative de connexion pour l'utilisateur : " + user.getUsername());
 
             // Appel à la méthode de validation modifiée qui renvoie un objet UserValidationResult
-            Database.UserValidationResult validationResult = Database.validateUser(user);
+            Database.UserValidationResult validationResult = Database.validateUser (user);
 
             // Vérification de la validité du mot de passe
             if (validationResult.isPasswordValid()) {
                 // Log si le mot de passe est valide
                 System.out.println("Mot de passe valide pour l'utilisateur : " + user.getUsername());
 
-                // Récupérer l'utilisateur avec son ID
-                user = Database.getUserByUsername(user.getUsername()); // Récupérer l'utilisateur depuis la base de données, incluant l'ID
+                // Générer un token JWT
+                String token = TokenUtil.generateToken(user.getUsername(), validationResult.isAdmin());
 
-                // Renvoyer une réponse JSON avec l'information sur l'utilisateur, y compris son ID et son rôle (isAdmin)
+                // Renvoyer une réponse JSON avec le token et l'information sur le rôle de l'utilisateur (isAdmin)
                 ApiResponse response = new ApiResponse("success", "Login successful!", user);
-                response.getUser().setAdmin(validationResult.isAdmin());  // Ajout du statut admin à la réponse
-
-                // Inclure l'ID de l'utilisateur dans la réponse
-                response.getUser().setId(user.getId());  // Assurez-vous que la méthode `getId()` existe sur l'objet User
+                response.getUser ().setAdmin(validationResult.isAdmin());  // Ajout du statut admin à la réponse
+                response.setToken(token); // Ajout du token à la réponse
 
                 return new Gson().toJson(response);  // Sérialisation correcte de l'objet
             } else {
