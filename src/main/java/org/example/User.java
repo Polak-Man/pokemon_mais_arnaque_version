@@ -1,10 +1,12 @@
 package org.example;
 
 public class User {
+    private Integer id;
     private String username;
     private String password;
     private boolean isAdmin;
     private String newPassword;
+
 
     public String getUsername() {
         return username;
@@ -36,5 +38,13 @@ public class User {
 
     public void setNewPassword(String newPassword) {
         this.newPassword = newPassword;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public Integer getId() {
+        return id;
     }
 }

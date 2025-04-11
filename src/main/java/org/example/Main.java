@@ -11,7 +11,7 @@ public class Main {
         before((req, res) -> {
             res.header("Access-Control-Allow-Origin", "http://localhost:5173"); // Frontend URL
             res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-            res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+            res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, Username");
         });
 
         // Gestion des OPTIONS pour les pré-vols CORS
@@ -34,6 +34,7 @@ public class Main {
         });
 
         // Route pour la connexion
+        // Route pour la connexion
         post("/login", (req, res) -> {
             res.type("application/json");
             User user = new Gson().fromJson(req.body(), User.class);
@@ -49,9 +50,15 @@ public class Main {
                 // Log si le mot de passe est valide
                 System.out.println("Mot de passe valide pour l'utilisateur : " + user.getUsername());
 
-                // Renvoyer une réponse JSON avec l'information sur le rôle de l'utilisateur (isAdmin)
+                // Récupérer l'utilisateur avec son ID
+                user = Database.getUserByUsername(user.getUsername()); // Récupérer l'utilisateur depuis la base de données, incluant l'ID
+
+                // Renvoyer une réponse JSON avec l'information sur l'utilisateur, y compris son ID et son rôle (isAdmin)
                 ApiResponse response = new ApiResponse("success", "Login successful!", user);
                 response.getUser().setAdmin(validationResult.isAdmin());  // Ajout du statut admin à la réponse
+
+                // Inclure l'ID de l'utilisateur dans la réponse
+                response.getUser().setId(user.getId());  // Assurez-vous que la méthode `getId()` existe sur l'objet User
 
                 return new Gson().toJson(response);  // Sérialisation correcte de l'objet
             } else {
@@ -62,9 +69,6 @@ public class Main {
                 return new Gson().toJson(response);  // Sérialisation correcte de l'objet
             }
         });
-
-
-
 
 
         // Route pour vérifier si un utilisateur est administrateur
@@ -122,6 +126,38 @@ public class Main {
                 return new Gson().toJson(new ApiResponse("error", "Password update failed!"));
             }
         });
+
+        // Route pour changer le nom d'utilisateur
+        put("/users/:username/change-name", (req, res) -> {
+            res.type("application/json");
+            String currentUsername = req.headers("Username"); // Nom d'utilisateur de l'utilisateur authentifié
+            String usernameToUpdate = req.params("username"); // Nom d'utilisateur à modifier
+            String newUsername = new Gson().fromJson(req.body(), User.class).getUsername(); // Nouveau nom
+
+            // Vérifier que l'utilisateur est soit l'utilisateur lui-même, soit un administrateur
+            boolean isAdmin = Database.isAdmin(currentUsername);
+            if (!currentUsername.equals(usernameToUpdate) && !isAdmin) {
+                res.status(403); // Accès interdit
+                return new Gson().toJson(new ApiResponse("error", "Forbidden: Only the user or an admin can change the username"));
+            }
+
+            // Vérification si le nouveau nom d'utilisateur est déjà pris
+            boolean usernameExists = Database.usernameExists(newUsername);
+            if (usernameExists) {
+                res.status(400); // Mauvaise requête
+                return new Gson().toJson(new ApiResponse("error", "Username already exists"));
+            }
+
+            // Mise à jour du nom d'utilisateur dans la base de données
+            boolean success = Database.updateUsername(usernameToUpdate, newUsername);
+            if (success) {
+                return new Gson().toJson(new ApiResponse("success", "Username updated successfully!"));
+            } else {
+                res.status(400); // Mauvaise requête
+                return new Gson().toJson(new ApiResponse("error", "Failed to update username"));
+            }
+        });
+
 
         // Route pour supprimer un utilisateur
         delete("/users/:username", (req, res) -> {
@@ -202,6 +238,7 @@ public class Main {
             String username = req.params("username");
             int cardId = Integer.parseInt(req.params("cardId"));
 
+            // Ajouter la carte au joueur (en tenant compte du username)
             boolean success = Database.addPokemonToUserCollection(username, cardId);
             if (success) {
                 return new Gson().toJson(new ApiResponse("success", "Pokemon card added to user collection!"));
@@ -211,11 +248,14 @@ public class Main {
             }
         });
 
+
+
         delete("/user/:username/pokemon/:cardId", (req, res) -> {
             res.type("application/json");
             String username = req.params("username");
             int cardId = Integer.parseInt(req.params("cardId"));
 
+            // Supprimer la carte de la collection du joueur
             boolean success = Database.removePokemonFromUserCollection(username, cardId);
             if (success) {
                 return new Gson().toJson(new ApiResponse("success", "Pokemon card removed from user collection!"));
@@ -225,12 +265,15 @@ public class Main {
             }
         });
 
+
         get("/user/:username/pokemon", (req, res) -> {
             res.type("application/json");
             String username = req.params("username");
 
+            // Récupérer toutes les cartes du joueur
             List<PokemonCard> userCards = Database.getUserPokemonCards(username);
             return new Gson().toJson(userCards);
         });
+
     }
 }

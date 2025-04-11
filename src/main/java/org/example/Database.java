@@ -52,6 +52,20 @@ public class Database {
         }
     }
 
+    public static boolean usernameExists(String username) {
+        String query = "SELECT 1 FROM usr WHERE usr_id = ?";
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            stmt.setString(1, username);
+            ResultSet rs = stmt.executeQuery();
+            return rs.next(); // Si un résultat est trouvé, le nom d'utilisateur existe déjà
+        } catch (SQLException e) {
+            System.err.println("Erreur lors de la vérification du nom d'utilisateur : " + e.getMessage());
+            return false; // En cas d'erreur, on considère que le nom d'utilisateur n'existe pas
+        }
+    }
+
     public static UserValidationResult validateUser(User user) {
         String query = "SELECT password, is_admin FROM usr WHERE usr_id = ?";
         try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
@@ -73,8 +87,34 @@ public class Database {
     }
 
 
+    public static boolean updateUsername(String oldUsername, String newUsername) {
+        String checkQuery = "SELECT 1 FROM usr WHERE usr_id = ?";
+        String updateQuery = "UPDATE usr SET usr_id = ? WHERE usr_id = ?";
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement checkStmt = conn.prepareStatement(checkQuery);
+             PreparedStatement updateStmt = conn.prepareStatement(updateQuery)) {
+
+            checkStmt.setString(1, newUsername);
+            ResultSet rs = checkStmt.executeQuery();
+            if (rs.next()) {
+                System.err.println("Le nom d'utilisateur '" + newUsername + "' est déjà pris.");
+                return false; // Le nouveau nom d'utilisateur est déjà utilisé
+            }
+
+            updateStmt.setString(1, newUsername);
+            updateStmt.setString(2, oldUsername);
+            int rowsUpdated = updateStmt.executeUpdate();
+            return rowsUpdated > 0;
+        } catch (SQLException e) {
+            System.err.println("Erreur lors de la mise à jour du nom d'utilisateur : " + e.getMessage());
+            return false; // Erreur de base de données
+        }
+    }
+
+
+
     public static User getUserByUsername(String username) {
-        String query = "SELECT usr_id, password, is_admin FROM usr WHERE usr_id = ?";
+        String query = "SELECT id, usr_id, password, is_admin FROM usr WHERE usr_id = ?";
         try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
              PreparedStatement stmt = conn.prepareStatement(query)) {
 
@@ -82,7 +122,8 @@ public class Database {
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
                 User user = new User();
-                user.setUsername(rs.getString("usr_id"));
+                user.setId(rs.getInt("id"));  // Utilisation de l'auto-incrémenté id
+                user.setUsername(rs.getString("usr_id"));  // Nom d'utilisateur
                 user.setPassword(rs.getString("password"));
                 user.setAdmin(rs.getBoolean("is_admin"));
                 return user;
@@ -92,6 +133,7 @@ public class Database {
         }
         return null; // Si l'utilisateur n'est pas trouvé, on retourne null
     }
+
 
     public static boolean isAdmin(String username) {
         String query = "SELECT is_admin FROM usr WHERE usr_id = ?";
@@ -135,19 +177,15 @@ public class Database {
              PreparedStatement stmt = conn.prepareStatement(query)) {
 
             stmt.setBoolean(1, isAdmin);
-            stmt.setString(2, username);
+            stmt.setString(2, username);  // On passe usr_id pour la mise à jour
             int rowsUpdated = stmt.executeUpdate();
-            if (rowsUpdated > 0) {
-                return true;
-            } else {
-                System.err.println("User not found: " + username);
-                return false; // L'utilisateur n'a pas été trouvé
-            }
+            return rowsUpdated > 0;
         } catch (SQLException e) {
             System.err.println("Error during user update: " + e.getMessage());
-            return false; // Problème de base de données
+            return false;
         }
     }
+
 
     public static boolean updatePassword(String username, String newPassword) {
         String query = "UPDATE usr SET password = ? WHERE usr_id = ?";
@@ -292,36 +330,53 @@ public class Database {
     }
 
     public static boolean addPokemonToUserCollection(String username, int cardId) {
-        String query = "INSERT INTO user_pokemon_cards (user_id, card_id) VALUES (?, ?)";
+        int usrId = getUserIdFromUsername(username);  // Récupérer l'ID de l'utilisateur via son username
+        if (usrId == -1) {
+            return false;  // Si l'utilisateur n'existe pas, retourne false
+        }
+
+        String query = "INSERT INTO user_pokemon_cards (usr_id, card_id, username) VALUES (?, ?, ?)";
         try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
              PreparedStatement stmt = conn.prepareStatement(query)) {
-
-            stmt.setString(1, username);
+            stmt.setInt(1, usrId);
             stmt.setInt(2, cardId);
-            return stmt.executeUpdate() > 0;
+            stmt.setString(3, username);  // On ajoute le username en plus du usr_id et card_id
+
+            // Ajout de l'affichage pour déboguer
+            System.out.println("Requête d'insertion : " + stmt.toString());
+
+            int rowsAffected = stmt.executeUpdate();
+            return rowsAffected > 0;  // Si une ligne est affectée, cela signifie que l'ajout a réussi
         } catch (SQLException e) {
             System.err.println("Erreur lors de l'ajout de la carte à la collection de l'utilisateur : " + e.getMessage());
             return false;
         }
     }
 
+
     public static boolean removePokemonFromUserCollection(String username, int cardId) {
-        String query = "DELETE FROM user_pokemon_cards WHERE user_id = ? AND card_id = ?";
+        int usrId = getUserIdFromUsername(username);  // Récupérer l'ID de l'utilisateur via son username
+        if (usrId == -1) {
+            return false;  // Si l'utilisateur n'existe pas, retourne false
+        }
+
+        String query = "DELETE FROM user_pokemon_cards WHERE usr_id = ? AND card_id = ? AND username = ?";
         try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
              PreparedStatement stmt = conn.prepareStatement(query)) {
-
-            stmt.setString(1, username);
+            stmt.setInt(1, usrId);
             stmt.setInt(2, cardId);
-            return stmt.executeUpdate() > 0;
+            stmt.setString(3, username);  // Utilisation du username pour valider la suppression
+            int rowsAffected = stmt.executeUpdate();
+            return rowsAffected > 0;  // Si une ligne est affectée, cela signifie que la suppression a réussi
         } catch (SQLException e) {
-            System.err.println("Erreur lors du retrait de la carte de la collection de l'utilisateur : " + e.getMessage());
+            System.err.println("Erreur lors de la suppression de la carte de la collection de l'utilisateur : " + e.getMessage());
             return false;
         }
     }
 
     public static List<PokemonCard> getUserPokemonCards(String username) {
         List<PokemonCard> cards = new ArrayList<>();
-        String query = "SELECT pc.* FROM pokemon_cards pc JOIN user_pokemon_cards upc ON pc.card_id = upc.card_id WHERE upc.user_id = ?";
+        String query = "SELECT pc.* FROM pokemon_cards pc JOIN user_pokemon_cards upc ON pc.card_id = upc.card_id WHERE upc.username = ?";
         try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
              PreparedStatement stmt = conn.prepareStatement(query)) {
             stmt.setString(1, username);
@@ -344,6 +399,25 @@ public class Database {
             System.err.println("Erreur lors de la récupération des cartes de l'utilisateur : " + e.getMessage());
         }
         return cards;
+    }
+
+    public static int getUserIdFromUsername(String username) {
+        String query = "SELECT id FROM usr WHERE usr_id = ?";
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            stmt.setString(1, username);  // Utilisation du username
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("id");  // Retourne l'usr_id de l'utilisateur
+                } else {
+                    return -1;  // Si aucun utilisateur n'est trouvé
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Erreur lors de la récupération de l'ID utilisateur : " + e.getMessage());
+            return -1;
+        }
     }
 
 }
