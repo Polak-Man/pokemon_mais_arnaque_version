@@ -2,17 +2,22 @@ package org.example;
 
 import static spark.Spark.*;
 import com.google.gson.Gson;
+import java.util.List;
 
 public class Main {
     public static void main(String[] args) {
         port(4567); // Démarre le serveur sur le port 4567
 
-        // Middleware : Vérifie si un utilisateur est admin avant les requêtes sensibles
-        before("/users/*", (req, res) -> {
-            String username = req.headers("Username");
-            if (username == null || !Database.isAdmin(username)) {
-                halt(403, new Gson().toJson(new ApiResponse("error", "Forbidden: Admin access required")));
-            }
+        before((req, res) -> {
+            res.header("Access-Control-Allow-Origin", "http://localhost:5173"); // Frontend URL
+            res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+            res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+        });
+
+        // Gestion des OPTIONS pour les pré-vols CORS
+        options("/*", (request, response) -> {
+            response.status(200);
+            return "OK";
         });
 
         // Route pour l'inscription
@@ -80,7 +85,6 @@ public class Main {
             String username = req.params("username");
             String currentUsername = req.headers("Username");
 
-            // Vérifie si l'utilisateur est admin ou met à jour son propre mot de passe
             boolean isAdmin = Database.isAdmin(currentUsername);
             if (!isAdmin && !currentUsername.equals(username)) {
                 res.status(403);
@@ -88,9 +92,8 @@ public class Main {
             }
 
             User requestUser = new Gson().fromJson(req.body(), User.class);
-
-            // Met à jour le mot de passe dans la base de données
             boolean success = Database.updatePassword(username, requestUser.getNewPassword());
+
             if (success) {
                 return new Gson().toJson(new ApiResponse("success", "Password updated successfully!"));
             } else {
@@ -99,7 +102,7 @@ public class Main {
             }
         });
 
-
+        // Route pour supprimer un utilisateur
         delete("/users/:username", (req, res) -> {
             res.type("application/json");
             String username = req.params("username");
@@ -118,7 +121,7 @@ public class Main {
             }
         });
 
-        // Route pour ajouter une carte Pokémon
+        // Pokémon routes
         post("/pokemon", (req, res) -> {
             res.type("application/json");
             PokemonCard card = new Gson().fromJson(req.body(), PokemonCard.class);
@@ -131,7 +134,6 @@ public class Main {
             }
         });
 
-        // Route pour mettre à jour une carte Pokémon
         put("/pokemon/:cardId", (req, res) -> {
             res.type("application/json");
             int cardId = Integer.parseInt(req.params("cardId"));
@@ -145,7 +147,6 @@ public class Main {
             }
         });
 
-        // Route pour supprimer une carte Pokémon
         delete("/pokemon/:cardId", (req, res) -> {
             res.type("application/json");
             int cardId = Integer.parseInt(req.params("cardId"));
@@ -158,14 +159,11 @@ public class Main {
             }
         });
 
-        // Route pour obtenir toutes les cartes Pokémon
         get("/pokemon", (req, res) -> {
             res.type("application/json");
             return new Gson().toJson(Database.getAllPokemonCards());
         });
 
-
-        // Route pour obtenir une carte Pokémon par son ID
         get("/pokemon/:cardId", (req, res) -> {
             res.type("application/json");
             int cardId = Integer.parseInt(req.params("cardId"));
@@ -178,5 +176,40 @@ public class Main {
             }
         });
 
+        post("/user/:username/pokemon/:cardId", (req, res) -> {
+            res.type("application/json");
+            String username = req.params("username");
+            int cardId = Integer.parseInt(req.params("cardId"));
+
+            boolean success = Database.addPokemonToUserCollection(username, cardId);
+            if (success) {
+                return new Gson().toJson(new ApiResponse("success", "Pokemon card added to user collection!"));
+            } else {
+                res.status(400);
+                return new Gson().toJson(new ApiResponse("error", "Failed to add Pokemon card to user collection!"));
+            }
+        });
+
+        delete("/user/:username/pokemon/:cardId", (req, res) -> {
+            res.type("application/json");
+            String username = req.params("username");
+            int cardId = Integer.parseInt(req.params("cardId"));
+
+            boolean success = Database.removePokemonFromUserCollection(username, cardId);
+            if (success) {
+                return new Gson().toJson(new ApiResponse("success", "Pokemon card removed from user collection!"));
+            } else {
+                res.status(400);
+                return new Gson().toJson(new ApiResponse("error", "Failed to remove Pokemon card from user collection!"));
+            }
+        });
+
+        get("/user/:username/pokemon", (req, res) -> {
+            res.type("application/json");
+            String username = req.params("username");
+
+            List<PokemonCard> userCards = Database.getUserPokemonCards(username);
+            return new Gson().toJson(userCards);
+        });
     }
 }

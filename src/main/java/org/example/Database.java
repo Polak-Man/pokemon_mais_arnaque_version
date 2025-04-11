@@ -35,21 +35,42 @@ public class Database {
     }
 
     public static boolean validateUser(User user) {
-        String query = "SELECT password FROM usr WHERE usr_id = ?";
+        String query = "SELECT password, is_admin FROM usr WHERE usr_id = ?";
         try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
              PreparedStatement stmt = conn.prepareStatement(query)) {
 
             stmt.setString(1, user.getUsername());
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
+                boolean isAdmin = rs.getBoolean("is_admin");
                 String storedPassword = rs.getString("password");
-                return storedPassword.equals(user.getPassword());
+                return {storedPassword.equals(user.getPassword()), isAdmin};
             }
             return false;
         } catch (SQLException e) {
             System.err.println("Erreur lors de la validation : " + e.getMessage());
             return false;
         }
+    }
+
+    public static User getUserByUsername(String username) {
+        String query = "SELECT usr_id, password, is_admin FROM usr WHERE usr_id = ?";
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            stmt.setString(1, username);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                User user = new User();
+                user.setUsername(rs.getString("usr_id"));
+                user.setPassword(rs.getString("password"));
+                user.setAdmin(rs.getBoolean("is_admin"));
+                return user;
+            }
+        } catch (SQLException e) {
+            System.err.println("Erreur lors de la récupération de l'utilisateur : " + e.getMessage());
+        }
+        return null; // Si l'utilisateur n'est pas trouvé, on retourne null
     }
 
     public static boolean isAdmin(String username) {
@@ -250,5 +271,59 @@ public class Database {
         }
     }
 
+    public static boolean addPokemonToUserCollection(String username, int cardId) {
+        String query = "INSERT INTO user_pokemon_cards (user_id, card_id) VALUES (?, ?)";
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            stmt.setString(1, username);
+            stmt.setInt(2, cardId);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Erreur lors de l'ajout de la carte à la collection de l'utilisateur : " + e.getMessage());
+            return false;
+        }
+    }
+
+    public static boolean removePokemonFromUserCollection(String username, int cardId) {
+        String query = "DELETE FROM user_pokemon_cards WHERE user_id = ? AND card_id = ?";
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            stmt.setString(1, username);
+            stmt.setInt(2, cardId);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Erreur lors du retrait de la carte de la collection de l'utilisateur : " + e.getMessage());
+            return false;
+        }
+    }
+
+    public static List<PokemonCard> getUserPokemonCards(String username) {
+        List<PokemonCard> cards = new ArrayList<>();
+        String query = "SELECT pc.* FROM pokemon_cards pc JOIN user_pokemon_cards upc ON pc.card_id = upc.card_id WHERE upc.user_id = ?";
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setString(1, username);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    PokemonCard card = new PokemonCard();
+                    card.setCardId(rs.getInt("card_id"));
+                    card.setCardName(rs.getString("card_name"));
+                    card.setEdition(rs.getString("edition"));
+                    card.setSetName(rs.getString("set_name"));
+                    card.setCardType(rs.getString("card_type"));
+                    card.setHp(rs.getInt("hp"));
+                    card.setAttack(rs.getInt("attack"));
+                    card.setRarity(rs.getString("rarity"));
+                    card.setDescription(rs.getString("description"));
+                    cards.add(card);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Erreur lors de la récupération des cartes de l'utilisateur : " + e.getMessage());
+        }
+        return cards;
+    }
 
 }
