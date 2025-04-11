@@ -38,19 +38,33 @@ public class Main {
             res.type("application/json");
             User user = new Gson().fromJson(req.body(), User.class);
 
+            // Vérification des données reçues
+            System.out.println("Tentative de connexion pour l'utilisateur : " + user.getUsername());
+
             // Appel à la méthode de validation modifiée qui renvoie un objet UserValidationResult
             Database.UserValidationResult validationResult = Database.validateUser(user);
 
             // Vérification de la validité du mot de passe
             if (validationResult.isPasswordValid()) {
-                // Si le mot de passe est valide, vous pouvez aussi vérifier si l'utilisateur est admin si nécessaire
-                // Par exemple, vous pouvez envoyer un message différent si l'utilisateur est admin
-                return new Gson().toJson(new ApiResponse("success", "Login successful!"));
+                // Log si le mot de passe est valide
+                System.out.println("Mot de passe valide pour l'utilisateur : " + user.getUsername());
+
+                // Renvoyer une réponse JSON avec l'information sur le rôle de l'utilisateur (isAdmin)
+                ApiResponse response = new ApiResponse("success", "Login successful!", user);
+                response.getUser().setAdmin(validationResult.isAdmin());  // Ajout du statut admin à la réponse
+
+                return new Gson().toJson(response);  // Sérialisation correcte de l'objet
             } else {
-                res.status(401);
-                return new Gson().toJson(new ApiResponse("error", "Invalid username or password!"));
+                // Log en cas d'échec
+                System.out.println("Échec de la validation du mot de passe pour l'utilisateur : " + user.getUsername());
+                res.status(401); // Code de statut HTTP 401 pour une erreur d'authentification
+                ApiResponse response = new ApiResponse("error", "Invalid username or password!");
+                return new Gson().toJson(response);  // Sérialisation correcte de l'objet
             }
         });
+
+
+
 
 
         // Route pour vérifier si un utilisateur est administrateur

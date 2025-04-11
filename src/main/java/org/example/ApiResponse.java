@@ -18,6 +18,9 @@ public class ApiResponse {
         this.user = user;
     }
 
+    public ApiResponse(String success, String message, boolean admin) {
+    }
+
     // Getters et Setters pour 'status', 'message' et 'user'
     public String getStatus() {
         return status;
